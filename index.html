@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Budget Tracker</title>
+    
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluent/180/000000/budget.png">
+    
+    <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --text-color: #000000;
+            --accent-color: #007af5;
+            --border-color: #e5e5ea;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #8e8e93;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            background-color: #fafafa;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px; /* Prevents iOS auto-zoom on focus */
+            font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:active {
+            background-color: #0056b3;
+        }
+
+        #statusBanner {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            margin-bottom: 15px;
+        }
+
+        .success { background-color: #34c759; color: white; }
+        .offline { background-color: #ff9500; color: white; }
+        .error { background-color: #ff3b30; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h2>Add Transaction</h2>
+        
+        <div id="statusBanner"></div>
+
+        <div class="card">
+            <form id="txForm">
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <select id="type" required>
+                        <option value="Income">Income</option>
+                        <option value="Fixed Expenses">Fixed Expenses</option>
+                        <option value="Variable Expenses">Variable Expenses</option>
+                        <option value="Savings">Savings</option>
+                        <option value="Debts">Debts</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <input type="text" id="category" placeholder="e.g., Groceries, Salary" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="details">Details</label>
+                    <textarea id="details" rows="2" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <button type="submit">Log Transaction</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Paste your exact Google Web App URL between the quotes below:
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWItkembDbh_jAOmFIW_ri23CXG29yjlpOLIhLPHY1Tns4H6S7hrrVrvlJuFfZon8SDA/exec";
+
+        // Auto-fill today's date on load
+        document.getElementById('date').valueAsDate = new Date();
+
+        const form = document.getElementById('txForm');
+        const banner = document.getElementById('statusBanner');
+
+        function showBanner(text, type, duration = 3000) {
+            banner.innerText = text;
+            banner.className = type;
+            banner.style.display = 'block';
+            if (duration > 0) {
+                setTimeout(() => { banner.style.display = 'none'; }, duration);
+            }
+        }
+
+        // Handle Form Submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const transaction = {
+                date: document.getElementById('date').value,
+                type: document.getElementById('type').value,
+                category: document.getElementById('category').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                details: document.getElementById('details').value
+            };
+
+            if (navigator.onLine) {
+                // Device is online: Send directly to Google Sheets
+                showBanner("Uploading...", "offline", 0);
+                try {
+                    const response = await fetch(GOOGLE_WEB_APP_URL, {
+                        method: "POST",
+                        mode: "no-cors", // Allows cross-origin requests to Google Scripts
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(transaction)
+                    });
+                    
+                    showBanner("Transaction Logged Successfully!", "success");
+                    form.reset();
+                    document.getElementById('date').valueAsDate = new Date();
+                } catch (error) {
+                    saveToLocalStorage(transaction);
+                    showBanner("Network Error. Saved locally instead.", "offline");
+                }
+            } else {
+                // Device is offline: Save local queue
+                saveToLocalStorage(transaction);
+                showBanner("Saved offline! Will sync automatically when connected.", "offline");
+                form.reset();
+                document.getElementById('date').valueAsDate = new Date();
+            }
+        });
+
+        // Offline storage helper
+        function saveToLocalStorage(data) {
+            let queue = JSON.parse(localStorage.getItem('tx_queue')) || [];
+            queue.push(data);
+            localStorage.setItem('tx_queue', JSON.stringify(queue));
+        }
+
+        // Automatic background sync when internet connection returns
+        window.addEventListener('online', async () => {
+            let queue = JSON.parse(localStorage.getItem('tx_queue')) || [];
+            if (queue.length === 0) return;
+
+            showBanner(`Syncing ${queue.length} offline transactions...`, "offline", 0);
+
+            let remainingQueue = [...queue];
+            for (let tx of queue) {
+                try {
+                    await fetch(GOOGLE_WEB_APP_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(tx)
+                    });
+                    remainingQueue.shift(); // Remove successfully sent item
+                } catch (err) {
+                    break; // Stop syncing if connection drops again
+                }
+            }
+
+            localStorage.setItem('tx_queue', JSON.stringify(remainingQueue));
+            if (remainingQueue.length === 0) {
+                showBanner("All offline transactions synced!", "success");
+            } else {
+                showBanner("Sync incomplete. Will retry later.", "error");
+            }
+        });
+    </script>
+</body>
+</html>
